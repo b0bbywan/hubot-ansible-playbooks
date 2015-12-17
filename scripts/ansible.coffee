@@ -32,18 +32,16 @@ startsWithSkip = startsWith('skip')
 startsWithOnly = startsWith('only')
 
 module.exports = (robot) ->
- robot.respond /update (prod|preprod|hubot)( only (\w*))?( skip (\w*))?$/i, (msg) ->
+ robot.respond /update (prod|preprod|hubot)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?$/i, (msg) ->
     target = msg.match[1]
     invfile = settings['path'] + "inventory/" + settings[target]['inventory']
     playbook = settings['path'] + settings[target]['playbook']
     cwd = settings['path']
 
     if msg.match[2]
-      if startsWithOnly(msg.match[2].trim())
-        tags = msg.match[3].trim()
-    if msg.match[4]
-      if startsWithSkip(msg.match[4].trim())
-       skip_tags = msg.match[5].trim()
+      tags = msg.match[3].trim()
+    if msg.match[5]
+      skip_tags = msg.match[6].trim()
 
     @exec = require('child_process').exec
 
