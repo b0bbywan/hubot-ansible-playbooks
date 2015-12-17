@@ -2,7 +2,7 @@
 #   A hubot script for launching ansible playbooks
 #
 # Commands:
-#   hubot ansible <env> [<tags>][ skip <tags>] - Execute the command on the hosts
+#   hubot update <environment> [only <tags>] [skip <tags>] - Execute the playbook on the host
 #
 # Author:
 #   Mathieu Réquillart
@@ -29,21 +29,21 @@ startsWith = (needle) ->
 
 startsWithSkip = startsWith('skip')
 
+startsWithOnly = startsWith('only')
+
 module.exports = (robot) ->
- robot.respond /ansible (prod|preprod|hubot) (skip (.*)|.*?)?( skip (.*))?$/i, (msg) ->
+ robot.respond /update (prod|preprod|hubot)( only (\w*))?( skip (\w*))?$/i, (msg) ->
     target = msg.match[1]
     invfile = settings['path'] + "inventory/" + settings[target]['inventory']
     playbook = settings['path'] + settings[target]['playbook']
     cwd = settings['path']
 
-    if msg.match[2].trim()
-      if not startsWithSkip(msg.match[2].trim())
-        tags = msg.match[2].trim()
-      else
-        skip_tags = msg.match[3].trim()
-
-    if msg.match[3]
-      skip_tags = if startsWithSkip(msg.match[3].trim()) then msg.match[4].trim()
+    if msg.match[2]
+      if startsWithOnly(msg.match[2].trim())
+        tags = msg.match[3].trim()
+    if msg.match[4]
+      if startsWithSkip(msg.match[4].trim())
+       skip_tags = msg.match[5].trim()
 
     @exec = require('child_process').exec
 
