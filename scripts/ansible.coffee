@@ -2,7 +2,10 @@
 #   A hubot script for launching ansible playbooks
 #
 # Commands:
-#   hubot update <environment> [only <tags>] [skip <tags>] - Execute the playbook on the host
+#   hubot update <environment> [only <tags>] [skip <tags>] - Execute the ansible playbook on the given environment
+#
+# Dependencies:
+#   "node-ansible": "^0.5.2"
 #
 # Author:
 #   Mathieu Réquillart
@@ -32,17 +35,22 @@ settings = {
   'path': '/home/ansible/metod-deploy/',
   'prod': {
      'inventory': 'ec2.py',
-     'playbook' : 'prod.yml'
+     'playbook' : 'prod',
+     'hosts'    : 'tag_Name_metod_web_instance'
   },
   'preprod': {
      'inventory': 'ec2.py',
-     'playbook' : 'preprod.yml'
+     'playbook' : 'preprod',
+     'hosts'    : 'tag_Name_metod_preprod_server'
   },
   'hubot': {
      'inventory': 'ec2.py',
-     'playbook' : 'inframanager.yml'
+     'playbook' : 'inframanager',
+     'hosts'    : 'tag_Name_metod_infra_manager'
   },
 }
+
+Ansible = require('node-ansible')
 
 startsWith = (needle) ->
   (haystack) ->
@@ -55,29 +63,35 @@ startsWithOnly = startsWith('only')
 module.exports = (robot) ->
  robot.respond /update (prod|preprod|hubot)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?$/i, (msg) ->
     target = msg.match[1]
-    invfile = settings['path'] + "inventory/" + settings[target]['inventory']
-    playbook = settings['path'] + settings[target]['playbook']
+    invfile = "inventory/" + settings[target]['inventory']
+    playbook = settings[target]['playbook']
     cwd = settings['path']
 
     if msg.match[2]
-      tags = msg.match[3].trim()
+      tags = msg.match[3].trim().split ","
     if msg.match[5]
-      skip_tags = msg.match[6].trim()
+      skip_tags = msg.match[6].trim().split ","
 
-    @exec = require('child_process').exec
     msg.send msg.random marvin_quotes
     if (tags?) and (skip_tags?)
       msg.send "updating: #{target} limiting to #{tags} without #{skip_tags}"
-      command = "ansible-playbook -i #{invfile} #{playbook} --tags #{tags} --skip-tags #{skip_tags}"
+      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).tags(tags).skipTags(skip_tags)
     else if (tags?) and not (skip_tags?)
       msg.send "updating: #{target} limiting to #{tags}"
-      command = "ansible-playbook -i #{invfile} #{playbook} --tags #{tags}"
+      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).tags(tags)
     else if not (tags?) and (skip_tags?)
       msg.send "updating: #{target} without #{skip_tags}"
-      command = "ansible-playbook -i #{invfile} #{playbook} --skip-tags #{skip_tags}"
+      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).skipTags(skip_tags)
     else if not (tags?) and not (skip_tags?)
       msg.send "updating: #{target}"
-      command = "ansible-playbook -i #{invfile} #{playbook}"
+      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
 
-    @exec command, {cwd: cwd}, (error, stdout, stderr) ->
-      msg.send stdout
+    playbook.on 'stdout', (data) ->
+      msg.send data.toString()
+      return
+
+    playbook.on 'stderr', (data) ->
+      msg.send data.toString()
+      return
+
+    playbook.exec cwd: cwd
