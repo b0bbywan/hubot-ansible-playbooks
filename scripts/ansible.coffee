@@ -67,12 +67,23 @@ module.exports = (robot) ->
     playbook = settings[target]['playbook']
     cwd = settings['path']
 
+    buffer = []
+    handleTimeOut = null
+
+    emptyBuffer = ->
+      if buffer.length > 0
+        msg.send buffer.join('\n')
+        buffer = []
+        handleTimeOut = setTimeout(emptyBuffer, 2000)
+      return
+
     if msg.match[2]
       tags = msg.match[3].trim().split ","
     if msg.match[5]
       skip_tags = msg.match[6].trim().split ","
 
     msg.send msg.random marvin_quotes
+
     if (tags?) and (skip_tags?)
       msg.send "updating: #{target} limiting to #{tags} without #{skip_tags}"
       playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).tags(tags).skipTags(skip_tags)
@@ -87,11 +98,15 @@ module.exports = (robot) ->
       playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
 
     playbook.on 'stdout', (data) ->
-      msg.send data.toString()
+      buffer.push data.toString()
+      if handleTimeOut == null
+        handleTimeOut = setTimeout(emptyBuffer, 2000)
       return
 
     playbook.on 'stderr', (data) ->
-      msg.send data.toString()
+      buffer.push data.toString()
+      if handleTimeOut == null
+        handleTimeOut = setTimeout(emptyBuffer, 2000)
       return
 
     playbook.exec cwd: cwd
