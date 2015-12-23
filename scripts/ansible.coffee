@@ -98,15 +98,17 @@ module.exports = (robot) ->
       playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
 
     playbook.on 'stdout', (data) ->
-      buffer.push data.toString()
-      if handleTimeOut == null
-        handleTimeOut = setTimeout(emptyBuffer, 2000)
+      # buffer.push data.toString()
+      # if handleTimeOut == null
+      #   handleTimeOut = setTimeout(emptyBuffer, 2000)
+      msg.send data.toString()
       return
 
     playbook.on 'stderr', (data) ->
-      buffer.push data.toString()
-      if handleTimeOut == null
-        handleTimeOut = setTimeout(emptyBuffer, 2000)
+      # buffer.push data.toString()
+      # if handleTimeOut == null
+      #   handleTimeOut = setTimeout(emptyBuffer, 2000)
+      msg.send data.toString()
       return
 
     playbook.exec cwd: cwd
