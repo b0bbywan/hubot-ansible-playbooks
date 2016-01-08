@@ -69,12 +69,18 @@ module.exports = (robot) ->
 
     buffer = []
     handleTimeOut = null
+    bufferInterval = 1000
 
     emptyBuffer = ->
       if buffer.length > 0
         msg.send buffer.join('\n')
+          .replace(new RegExp(/ok: /g), ":check: ok: ")
+          .replace(new RegExp(/failed: /g), ":failed: failed: ")
+          .replace(new RegExp(/skipping: /g), ":skip: skipping: ")
         buffer = []
-        handleTimeOut = setTimeout(emptyBuffer, 2000)
+        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+      else
+        handleTimeOut = null
       return
 
     if msg.match[2]
@@ -98,17 +104,17 @@ module.exports = (robot) ->
       playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
 
     playbook.on 'stdout', (data) ->
-      # buffer.push data.toString()
-      # if handleTimeOut == null
-      #   handleTimeOut = setTimeout(emptyBuffer, 2000)
-      msg.send data.toString()
+      buffer.push data.toString()
+      if handleTimeOut == null
+        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+    #   msg.send data.toString()
       return
 
     playbook.on 'stderr', (data) ->
-      # buffer.push data.toString()
-      # if handleTimeOut == null
-      #   handleTimeOut = setTimeout(emptyBuffer, 2000)
-      msg.send data.toString()
+      buffer.push data.toString()
+      if handleTimeOut == null
+        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+    #   msg.send data.toString()
       return
 
     playbook.exec cwd: cwd
