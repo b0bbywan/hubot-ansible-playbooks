@@ -77,6 +77,7 @@ module.exports = (robot) ->
           .replace(new RegExp(/ok: /g), ":check: ok: ")
           .replace(new RegExp(/failed: /g), ":failed: failed: ")
           .replace(new RegExp(/skipping: /g), ":skip: skipping: ")
+          .replace(new RegExp(/changed: /g), ":changed: changed: ")
         buffer = []
         handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
       else
