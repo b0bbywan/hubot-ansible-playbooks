@@ -43,7 +43,7 @@ settings = {
      'playbook' : 'preprod',
      'hosts'    : 'tag_Name_metod_preprod_server'
   },
-  'hubot': {
+  'yourself': {
      'inventory': 'ec2.py',
      'playbook' : 'inframanager',
      'hosts'    : 'tag_Name_metod_infra_manager'
@@ -61,7 +61,7 @@ startsWithSkip = startsWith('skip')
 startsWithOnly = startsWith('only')
 
 module.exports = (robot) ->
- robot.respond /update (prod|preprod|hubot)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?$/i, (msg) ->
+ robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?$/i, (msg) ->
     target = msg.match[1]
     invfile = "inventory/" + settings[target]['inventory']
     playbook = settings[target]['playbook']
