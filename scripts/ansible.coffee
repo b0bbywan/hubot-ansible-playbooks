@@ -61,7 +61,7 @@ startsWithSkip = startsWith('skip')
 startsWithOnly = startsWith('only')
 
 module.exports = (robot) ->
- robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?$/i, (msg) ->
+ robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
     invfile = "inventory/" + settings[target]['inventory']
     playbook = settings[target]['playbook']
@@ -89,34 +89,40 @@ module.exports = (robot) ->
       tags = msg.match[3].trim().split ","
     if msg.match[5]
       skip_tags = msg.match[6].trim().split ","
+    if msg.match[8]
+      vars = msg.match[9].trim().split ","
+      varsJsonString = {}
+      i = 0
+      while i < vars.length
+        eltArray = vars[i].trim().split(':')
+        varsJsonString[eltArray[0]] = eltArray[1]
+        i++
+      varsJsonObj = JSON.parse JSON.stringify(jsonstring)
 
     msg.send msg.random marvin_quotes
 
-    if (tags?) and (skip_tags?)
-      msg.send "updating: #{target} limiting to #{tags} without #{skip_tags}"
-      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).tags(tags).skipTags(skip_tags)
-    else if (tags?) and not (skip_tags?)
-      msg.send "updating: #{target} limiting to #{tags}"
-      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).tags(tags)
-    else if not (tags?) and (skip_tags?)
-      msg.send "updating: #{target} without #{skip_tags}"
-      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook).skipTags(skip_tags)
-    else if not (tags?) and not (skip_tags?)
-      msg.send "updating: #{target}"
-      playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
+    playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
+    message = "updating: #{target}"
+    if (tags?)
+      playbook = playbook.tags(tags)
+      message = message + " limiting to #{tags}"
+    if (skip_tags?)
+      playbook = playbook.skipTags(skip_tags)
+      message = message + " without #{skip_tags}"
+    if (vars?)
+      playbook = playbook.variables(varsJsonObj)
+      message = message + " replacing #{vars}"
 
     playbook.on 'stdout', (data) ->
       buffer.push data.toString()
       if handleTimeOut == null
         handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
-    #   msg.send data.toString()
       return
 
     playbook.on 'stderr', (data) ->
       buffer.push data.toString()
       if handleTimeOut == null
         handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
-    #   msg.send data.toString()
       return
 
     playbook.exec cwd: cwd
