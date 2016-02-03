@@ -2,7 +2,7 @@
 #   A hubot script for launching ansible playbooks
 #
 # Commands:
-#   hubot update <environment> [only <tags>] [skip <tags>] - Execute the ansible playbook on the given environment
+#   hubot update <environment> [only <tags>] [skip <tags>] [with <key>:<value>] - Execute the ansible playbook on the given environment
 #
 # Dependencies:
 #   "node-ansible": "^0.5.2"
