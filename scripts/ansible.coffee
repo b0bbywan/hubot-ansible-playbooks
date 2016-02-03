@@ -10,6 +10,8 @@
 # Author:
 #   Mathieu Réquillart
 
+Ansible = require('node-ansible')
+
 marvin_quotes = [
   "Life! Don't talk to me about life",
   "Life's bad enough as it is without wanting to invent any more of it",
@@ -49,16 +51,6 @@ settings = {
      'hosts'    : 'tag_Name_metod_infra_manager'
   },
 }
-
-Ansible = require('node-ansible')
-
-startsWith = (needle) ->
-  (haystack) ->
-    `haystack.slice(0, needle.length) == needle`
-
-startsWithSkip = startsWith('skip')
-
-startsWithOnly = startsWith('only')
 
 module.exports = (robot) ->
  robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
