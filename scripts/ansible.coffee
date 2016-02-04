@@ -59,6 +59,8 @@ module.exports = (robot) ->
     playbook = settings[target]['playbook']
     cwd = settings['path']
 
+    msg.send msg.random marvin_quotes
+
     buffer = []
     handleTimeOut = null
     bufferInterval = 1000
@@ -91,8 +93,6 @@ module.exports = (robot) ->
         i++
       varsJsonObj = JSON.parse JSON.stringify(jsonstring)
 
-    msg.send msg.random marvin_quotes
-
     playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
     message = "updating: #{target}"
     if (tags?)
@@ -104,6 +104,8 @@ module.exports = (robot) ->
     if (vars?)
       playbook = playbook.variables(varsJsonObj)
       message = message + " replacing #{vars}"
+
+    msg.send message
 
     playbook.on 'stdout', (data) ->
       buffer.push data.toString()
