@@ -53,7 +53,7 @@ settings = {
 }
 
 module.exports = (robot) ->
- robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
+  robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
     invfile = "inventory/" + settings[target]['inventory']
     playbook = settings[target]['playbook']
@@ -91,7 +91,7 @@ module.exports = (robot) ->
         eltArray = vars[i].trim().split(':')
         varsJsonString[eltArray[0]] = eltArray[1]
         i++
-      varsJsonObj = JSON.parse JSON.stringify(jsonstring)
+      varsJsonObj = JSON.parse JSON.stringify(varsJsonString)
 
     playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
     message = "updating: #{target}"
