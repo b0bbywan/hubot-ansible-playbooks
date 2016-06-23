@@ -2,10 +2,10 @@
 #   A hubot script for launching ansible playbooks
 #
 # Commands:
-#   hubot update <environment> [only <tags>] [skip <tags>] [with <key>:<value>] - Execute the ansible playbook on the given environment
+#   hubot update <environment> [limit <hosts>] [only <tags>] [skip <tags>] [with <key>:<value>] - Execute the ansible playbook on the given environment
 #
 # Dependencies:
-#   "node-ansible": "^0.5.2"
+#   "node-ansible": "^0.5.5"
 #
 # Author:
 #   Mathieu Réquillart
@@ -53,7 +53,7 @@ settings = {
 }
 
 module.exports = (robot) ->
-  robot.respond /update (prod|preprod|yourself)( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
+  robot.respond /update (prod|preprod|yourself)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
     invfile = "inventory/" + settings[target]['inventory']
     playbook = settings[target]['playbook']
@@ -80,11 +80,13 @@ module.exports = (robot) ->
       return
 
     if msg.match[2]
-      tags = msg.match[3].trim().split ","
-    if msg.match[5]
-      skip_tags = msg.match[6].trim().split ","
-    if msg.match[8]
-      vars = msg.match[9].trim().split ","
+      limit = msg.match[3].trim()
+    if msg.match[4]
+      tags = msg.match[5].trim().split ","
+    if msg.match[7]
+      skip_tags = msg.match[8].trim().split ","
+    if msg.match[10]
+      vars = msg.match[11].trim().split ","
       varsJsonString = {}
       i = 0
       while i < vars.length
@@ -95,9 +97,12 @@ module.exports = (robot) ->
 
     playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
     message = "updating: #{target}"
+    if (limit?)
+      playbook = playbook.limit(limit)
+      message = message + " limiting to #{limit}"
     if (tags?)
       playbook = playbook.tags(tags)
-      message = message + " limiting to #{tags}"
+      message = message + " only with #{tags}"
     if (skip_tags?)
       playbook = playbook.skipTags(skip_tags)
       message = message + " without #{skip_tags}"
