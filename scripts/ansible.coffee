@@ -35,26 +35,38 @@ marvin_quotes = [
 
 settings = {
   'path': '/home/ansible/metod-deploy/',
+  'admin_users': [
+    'mathieu',
+    'fabien',
+    'thibaut',
+  ],
   'prod': {
      'inventory': 'ec2.py',
      'playbook' : 'prod',
-     'hosts'    : 'tag_Name_metod_web_instance'
+     'hosts'    : 'tag_Name_metod_web_instance',
+    'authorized_users': [],
+
   },
   'preprod': {
      'inventory': 'ec2.py',
      'playbook' : 'preprod',
-     'hosts'    : 'tag_Name_metod_preprod_server'
+     'hosts'    : 'tag_Name_metod_preprod_server',
+    'authorized_users': [],
   },
   'yourself': {
-     'inventory': 'ec2.py',
-     'playbook' : 'inframanager',
-     'hosts'    : 'tag_Name_metod_infra_manager'
-  },
+    'inventory': 'ec2.py',
+    'playbook' : 'deployer',
+    'hosts'    : 'tag_Name_deployer',
+    'authorized_users': [],
+  }
 }
 
 module.exports = (robot) ->
   robot.respond /update (prod|preprod|yourself)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
+    if msg.message.user.id not in settings['admin_users'] and msg.message.user.id not in settings[target]['authorized_users']
+      msg.send "Sorry bro', you're not allowed to do this"
+      return
     invfile = "inventory/" + settings[target]['inventory']
     playbook = settings[target]['playbook']
     cwd = settings['path']
