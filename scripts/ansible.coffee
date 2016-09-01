@@ -11,38 +11,14 @@
 #   Mathieu Réquillart
 
 Ansible = require('node-ansible')
-
-settings = {
-  'path': '/home/ansible/metod-deploy/',
-  'admin_users': [
-    'mathieu',
-    'fabien',
-    'thibaut',
-  ],
-  'prod': {
-     'inventory': 'ec2.py',
-     'playbook' : 'prod',
-     'hosts'    : 'tag_Name_metod_web_instance',
-    'authorized_users': [],
-
-  },
-  'preprod': {
-     'inventory': 'ec2.py',
-     'playbook' : 'preprod',
-     'hosts'    : 'tag_Name_metod_preprod_server',
-    'authorized_users': [],
-  },
-  'yourself': {
-    'inventory': 'ec2.py',
-    'playbook' : 'deployer',
-    'hosts'    : 'tag_Name_deployer',
-    'authorized_users': [],
-  }
-}
+settings = require './ansible_settings'
 
 module.exports = (robot) ->
-  robot.respond /update (prod|preprod|yourself)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
+  robot.respond /update (\w+((-|_)\w+)*)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
+    if !settings.hasOwnProperty(target)
+      msg.send "Unknown environment"
+      return
     if msg.message.user.id not in settings['admin_users'] and msg.message.user.id not in settings[target]['authorized_users']
       msg.send "Sorry bro', you're not allowed to do this"
       return
@@ -72,14 +48,14 @@ module.exports = (robot) ->
         handleTimeOut = null
       return
 
-    if msg.match[2]
-      limit = msg.match[3].trim()
     if msg.match[4]
-      tags = msg.match[5].trim().split ","
-    if msg.match[7]
-      skip_tags = msg.match[8].trim().split ","
-    if msg.match[10]
-      vars = msg.match[11].trim().split ","
+      limit = msg.match[5].trim()
+    if msg.match[6]
+      tags = msg.match[7].trim().split ","
+    if msg.match[9]
+      skip_tags = msg.match[10].trim().split ","
+    if msg.match[12]
+      vars = msg.match[13].trim().split ","
       varsJsonString = {}
       i = 0
       while i < vars.length
