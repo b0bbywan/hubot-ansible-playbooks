@@ -13,6 +13,9 @@
 Ansible = require('node-ansible')
 settings = require './ansible_settings'
 
+String::startsWith ?= (s) -> @slice(0, s.length) == s
+
+
 module.exports = (robot) ->
   robot.respond /update (\w+((-|_)\w+)*)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
@@ -34,6 +37,17 @@ module.exports = (robot) ->
     handleTimeOut = null
     bufferInterval = 1000
 
+    taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
+    playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/i
+    playRecapPattern = /PLAY RECAP \*+/i
+    handlerPattern = /RUNNING HANDLER \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/_]+ ?)*))?\] \*+/i
+
+    aPlay = ""
+    aPlayHostNumber = 0
+    aTask = ""
+    aTaskResult = []
+    taskIsSetup = false
+
     emptyBuffer = ->
       if buffer.length > 0
         msg.send buffer.join('\n')
@@ -47,6 +61,41 @@ module.exports = (robot) ->
       else
         handleTimeOut = null
       return
+
+    onMatch = (message) ->
+      if aTaskResult.length > 1
+        console.log 'match'
+        buffer.push aTaskResult...
+        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+      if message.match playPattern
+        buffer.push message
+      if message.match playRecapPattern
+        buffer.push message
+        recapMode = true
+      aTaskResult = []
+      aTaskResult.push message
+
+
+    filterBuffer = (message) ->
+      if message.match playPattern
+        onMatch message
+        aPlay = message.match[1]
+        aPlayHostNumber = 0
+      else if (message.match taskPattern)
+        onMatch message
+      else if (message.match handlerPattern)
+        onMatch message
+      else if (message.match playRecapPattern)
+        onMatch message
+      else
+        if (message.startsWith 'ok') or (message.startsWith 'skipping')
+          if (process.env.HUBOT_ANSIBLE_VERBOSE?)
+            aTaskResult.push message
+        else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed')
+          aTaskResult.push message
+        else
+          console.log('did not match', message)
+          buffer.push message
 
     if msg.match[4]
       limit = msg.match[5].trim()
@@ -82,15 +131,15 @@ module.exports = (robot) ->
     msg.send description
 
     playbook.on 'stdout', (data) ->
-      buffer.push data.toString()
+      filterBuffer data.toString()
       if handleTimeOut == null
         handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
       return
 
     playbook.on 'stderr', (data) ->
-      buffer.push data.toString()
-      if handleTimeOut == null
-        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+      filterBuffer data.toString()
+      if handleBufferTimeOut == null
+        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       return
 
     playbook.exec cwd: cwd
