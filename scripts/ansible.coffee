@@ -36,6 +36,8 @@ module.exports = (robot) ->
     buffer = []
     handleBufferTimeOut = null
     bufferInterval = 1000
+    handleTaskTimeout= null
+    bufferTaskInterval = 5000
 
     taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
     playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/i
@@ -62,14 +64,23 @@ module.exports = (robot) ->
         handleBufferTimeOut = null
       return
 
+    pushChangingTask = ->
+      robot.logger.debug "sending #{aTaskResult} early"
+      buffer.push aTaskResult...
+      aTaskResult = ['']
+      handleTaskTimeout = null
+      if handleBufferTimeOut == null
+        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
+
     onMatch = (message) ->
       if aTaskResult.length > 1
         robot.logger.debug 'match'
         buffer.push aTaskResult...
-        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
-      if message.match playPattern
-        buffer.push message
-      if message.match playRecapPattern
+        if handleBufferTimeOut == null
+          handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
+      if message.match taskPattern
+        handleTaskTimeout = setTimeout(pushChangingTask, bufferTaskInterval)
+      else if message.match playRecapPattern
         robot.logger.debug "recap mode activated"
         recapMode = true
         buffer.push message
@@ -79,6 +90,9 @@ module.exports = (robot) ->
 
     filterBuffer = (message) ->
       robot.logger.info message
+      if handleTaskTimeout != null
+        clearTimeout(handleTaskTimeout)
+        handleTaskTimeout = null
       if message.match playPattern
         onMatch message
         aPlay = message.match[1]
