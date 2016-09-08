@@ -64,19 +64,21 @@ module.exports = (robot) ->
 
     onMatch = (message) ->
       if aTaskResult.length > 1
-        console.log 'match'
+        robot.logger.debug 'match'
         buffer.push aTaskResult...
         handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
       if message.match playPattern
         buffer.push message
       if message.match playRecapPattern
-        buffer.push message
+        robot.logger.debug "recap mode activated"
         recapMode = true
+        buffer.push message
       aTaskResult = []
       aTaskResult.push message
 
 
     filterBuffer = (message) ->
+      robot.logger.info message
       if message.match playPattern
         onMatch message
         aPlay = message.match[1]
@@ -91,10 +93,12 @@ module.exports = (robot) ->
         if (message.startsWith 'ok') or (message.startsWith 'skipping')
           if (process.env.HUBOT_ANSIBLE_VERBOSE?)
             aTaskResult.push message
+          else
+            robot.logger.debug "skipped message : #{message}"
         else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed')
           aTaskResult.push message
         else
-          console.log('did not match', message)
+          robot.logger.warning "did not match #{message}"
           buffer.push message
 
     if msg.match[4]
