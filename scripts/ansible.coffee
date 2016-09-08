@@ -16,6 +16,22 @@ settings = require './ansible_settings'
 String::startsWith ?= (s) -> @slice(0, s.length) == s
 
 
+base_report = {
+    "attachments": [
+        {
+            "fallback": "Deployment report",
+            "author_name": "Ansible Report",
+            "author_icon": "https://avatars3.githubusercontent.com/u/1507452?v=2&s=32",
+            "title": "PLAY RECAP",
+            "fields": [
+            ],
+        }
+    ],
+    "username": process.env.HUBOT_SLACK_BOTNAME,
+    "as_user": true,
+}
+
+
 module.exports = (robot) ->
   robot.respond /update (\w+((-|_)\w+)*)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
     target = msg.match[1]
@@ -38,6 +54,7 @@ module.exports = (robot) ->
     bufferInterval = 1000
     handleTaskTimeout= null
     bufferTaskInterval = 5000
+    recapMode = false
 
     taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
     playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/i
@@ -49,6 +66,7 @@ module.exports = (robot) ->
     aTask = ""
     aTaskResult = []
     taskIsSetup = false
+
 
     emptyBuffer = ->
       if buffer.length > 0
@@ -72,6 +90,11 @@ module.exports = (robot) ->
       if handleBufferTimeOut == null
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
 
+    sendRecap = ->
+      robot.logger.debug "sending #{base_report}"
+      msg.send(base_report)
+      recapMode = false
+
     onMatch = (message) ->
       if aTaskResult.length > 1
         robot.logger.debug 'match'
@@ -82,8 +105,10 @@ module.exports = (robot) ->
         handleTaskTimeout = setTimeout(pushChangingTask, bufferTaskInterval)
       else if message.match playRecapPattern
         robot.logger.debug "recap mode activated"
+        failedMode = false
         recapMode = true
-        buffer.push message
+        base_report.attachments[0].fields = []
+        setTimeout(sendRecap, 10000)
       aTaskResult = []
       aTaskResult.push message
 
@@ -111,6 +136,15 @@ module.exports = (robot) ->
             robot.logger.debug "skipped message : #{message}"
         else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed')
           aTaskResult.push message
+        else if recapMode
+          robot.logger.debug "recapMode : #{message}"
+          splittedMessage = message.split(':')
+          if splittedMessage.length > 1
+            host = splittedMessage[0].trim()
+            result = splittedMessage[1].trim()
+            field = {"title": host, "value": result, short: false}
+            robot.logger.debug field
+            base_report.attachments[0].fields.push field
         else
           robot.logger.warning "did not match #{message}"
           buffer.push message
