@@ -55,11 +55,13 @@ module.exports = (robot) ->
     handleTaskTimeout= null
     bufferTaskInterval = 5000
     recapMode = false
+    failedMode = false
 
     taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
     playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/i
     playRecapPattern = /PLAY RECAP \*+/i
     handlerPattern = /RUNNING HANDLER \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/_]+ ?)*))?\] \*+/i
+    noMoreHostLeftPattern = /NO MORE HOSTS LEFT \*+/i
 
     aPlay = ""
     aPlayHostNumber = 0
@@ -109,6 +111,8 @@ module.exports = (robot) ->
         recapMode = true
         base_report.attachments[0].fields = []
         setTimeout(sendRecap, 10000)
+      else if (message.match noMoreHostLeftPattern)
+        failedMode = true
       aTaskResult = []
       aTaskResult.push message
 
@@ -128,6 +132,8 @@ module.exports = (robot) ->
         onMatch message
       else if (message.match playRecapPattern)
         onMatch message
+      else if (message.match noMoreHostLeftPattern)
+        onMatch message
       else
         if (message.startsWith 'ok') or (message.startsWith 'skipping')
           if (process.env.HUBOT_ANSIBLE_VERBOSE?)
@@ -136,6 +142,8 @@ module.exports = (robot) ->
             robot.logger.debug "skipped message : #{message}"
         else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed')
           aTaskResult.push message
+        else if failedMode
+          buffer.push message
         else if recapMode
           robot.logger.debug "recapMode : #{message}"
           splittedMessage = message.split(':')
