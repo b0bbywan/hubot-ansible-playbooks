@@ -34,7 +34,7 @@ module.exports = (robot) ->
     }
 
     buffer = []
-    handleTimeOut = null
+    handleBufferTimeOut = null
     bufferInterval = 1000
 
     taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
@@ -57,16 +57,16 @@ module.exports = (robot) ->
           .replace(new RegExp(/changed: /g), ":changed: changed: ")
           .replace(new RegExp(/fatal: /g), ":fatal: fatal: ")
         buffer = []
-        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       else
-        handleTimeOut = null
+        handleBufferTimeOut = null
       return
 
     onMatch = (message) ->
       if aTaskResult.length > 1
         robot.logger.debug 'match'
         buffer.push aTaskResult...
-        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       if message.match playPattern
         buffer.push message
       if message.match playRecapPattern
@@ -136,8 +136,8 @@ module.exports = (robot) ->
 
     playbook.on 'stdout', (data) ->
       filterBuffer data.toString()
-      if handleTimeOut == null
-        handleTimeOut = setTimeout(emptyBuffer, bufferInterval)
+      if handleBufferTimeOut == null
+        handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       return
 
     playbook.on 'stderr', (data) ->
