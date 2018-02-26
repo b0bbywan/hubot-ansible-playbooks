@@ -1,5 +1,5 @@
 # Description:
-#   A hubot script for launching ansible playbooks
+#   A hubot script to launch ansible playbooks
 #
 # Commands:
 #   hubot update <environment> [limit <hosts>] [only <tags>] [skip <tags>] [with <key>:<value>] - Execute the ansible playbook on the given environment
@@ -11,26 +11,25 @@
 #   Mathieu Réquillart
 
 Ansible = require('node-ansible')
-settings = require './ansible_settings'
+settings = require process.env.HUBOT_ANSIBLE_SETTINGS
 
 String::startsWith ?= (s) -> @slice(0, s.length) == s
 
 
 base_report = {
-    "attachments": [
-        {
-            "fallback": "Deployment report",
-            "author_name": "Ansible Report",
-            "author_icon": "https://avatars3.githubusercontent.com/u/1507452?v=2&s=32",
-            "title": "PLAY RECAP",
-            "fields": [
-            ],
-        }
-    ],
-    "username": process.env.HUBOT_SLACK_BOTNAME,
-    "as_user": true,
+  "attachments": [
+    {
+      "fallback": "Deployment report",
+      "author_name": "Ansible Report",
+      "author_icon": "https://avatars3.githubusercontent.com/u/1507452?v=2&s=32",
+      "title": "PLAY RECAP",
+      "fields": [
+      ],
+    }
+  ],
+  "username": process.env.HUBOT_SLACK_BOTNAME,
+  "as_user": true,
 }
-
 
 module.exports = (robot) ->
   robot.respond /update (\w+((-|_)\w+)*)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
@@ -73,11 +72,11 @@ module.exports = (robot) ->
     emptyBuffer = ->
       if buffer.length > 0
         msg.send buffer.join('\n')
-          .replace(new RegExp(/ok: /g), ":check: ok: ")
-          .replace(new RegExp(/failed: /g), ":failed: failed: ")
-          .replace(new RegExp(/skipping: /g), ":skip: skipping: ")
-          .replace(new RegExp(/changed: /g), ":changed: changed: ")
-          .replace(new RegExp(/fatal: /g), ":fatal: fatal: ")
+          .replace(new RegExp(/ok: /g), ":heavy_check_mark: ok: ")
+          .replace(new RegExp(/failed: /g), ":x: failed: ")
+          .replace(new RegExp(/skipping: /g), ":white_check_mark: skipping: ")
+          .replace(new RegExp(/changed: /g), ":heavy_plus_sign: changed: ")
+          .replace(new RegExp(/fatal: /g), ":sos: fatal: ")
         buffer = []
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       else
