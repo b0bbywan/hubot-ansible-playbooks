@@ -173,19 +173,19 @@ module.exports = (robot) ->
       varsJsonObj = JSON.parse JSON.stringify(varsJsonString)
 
     playbook = (new (Ansible.Playbook)).inventory(invfile).playbook(playbook)
-    description = "updating: #{target}"
+    description = "updating: *#{target}*"
     if (limit?)
       playbook = playbook.limit(limit)
-      description = description + " limiting to #{limit}"
+      description = description + " limiting to *#{limit}*"
     if (tags?)
       playbook = playbook.tags(tags)
-      description = description + " only with #{tags}"
+      description = description + " only with *#{tags}*"
     if (skip_tags?)
       playbook = playbook.skipTags(skip_tags)
-      description = description + " without #{skip_tags}"
+      description = description + " without *#{skip_tags}*"
     if (vars?)
       playbook = playbook.variables(varsJsonObj)
-      description = description + " replacing #{vars}"
+      description = description + " replacing *#{vars}*"
 
     msg.send description
 
