@@ -61,6 +61,7 @@ module.exports = (robot) ->
     playRecapPattern = /PLAY RECAP \*+/i
     handlerPattern = /RUNNING HANDLER \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/_]+ ?)*))?\] \*+/i
     noMoreHostLeftPattern = /NO MORE HOSTS LEFT \*+/i
+    deprecationWarningPattern = /\[DEPRECATION WARNING\]/i
 
     aPlay = ""
     aPlayHostNumber = 0
@@ -77,6 +78,7 @@ module.exports = (robot) ->
           .replace(new RegExp(/skipping: /g), ":white_check_mark: skipping: ")
           .replace(new RegExp(/changed: /g), ":heavy_plus_sign: changed: ")
           .replace(new RegExp(/fatal: /g), ":sos: fatal: ")
+          .replace(new RegExp(/\[DEPRECATION WARNING\]: /g), ":exclamation: warning: ")
         buffer = []
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       else
@@ -139,7 +141,7 @@ module.exports = (robot) ->
             aTaskResult.push message
           else
             robot.logger.debug "skipped message : #{message}"
-        else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed')
+        else if (message.startsWith 'failed') or (message.startsWith 'fatal') or (message.startsWith 'changed') or (message.match deprecationWarningPattern)
           aTaskResult.push message
         else if failedMode
           buffer.push message
@@ -153,7 +155,7 @@ module.exports = (robot) ->
             robot.logger.debug field
             base_report.attachments[0].fields.push field
         else
-          robot.logger.warning "did not match #{message}"
+          robot.logger.warning "warn: #{message} did not match"
           buffer.push message
 
     if msg.match[4]
