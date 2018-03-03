@@ -106,6 +106,14 @@ module.exports = (robot) ->
           handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       if message.match taskPattern
         handleTaskTimeout = setTimeout(pushChangingTask, bufferTaskInterval)
+      else if playPattern.test message
+        match = message.match playPattern
+        if (limit?)
+          robot.logger.debug "limit: #{limit}, host: #{match[2]}, #{match[1]}"
+          if match[2] == limit
+            buffer.push message
+        else
+          buffer.push message
       else if message.match playRecapPattern
         robot.logger.debug "recap mode activated"
         failedMode = false
