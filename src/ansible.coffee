@@ -198,13 +198,20 @@ module.exports = (robot) ->
     msg.send description
 
     playbook.on 'stdout', (data) ->
-      filterBuffer data.toString()
+      results = data.toString().split('\n')
+      results.forEach (r) ->
+        if !r.match emptyStringPattern
+          filterBuffer r, limit
+        return
       if handleBufferTimeOut == null
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       return
 
     playbook.on 'stderr', (data) ->
-      filterBuffer data.toString()
+      results = data.toString().split('\n')
+      results.forEach (r) ->
+        filterBuffer r
+        return
       if handleBufferTimeOut == null
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       return
