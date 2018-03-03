@@ -81,7 +81,8 @@ module.exports = (robot) ->
       if handleBufferTimeOut == null
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
 
-    onMatch = (message) ->
+    onTaskMatch = (message) ->
+      robot.logger.debug("task match")
       if aTaskResult.length > 1
         robot.logger.debug 'match'
         buffer.push aTaskResult...
@@ -89,22 +90,6 @@ module.exports = (robot) ->
           handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
       if message.match taskPattern
         handleTaskTimeout = setTimeout(pushChangingTask, bufferTaskInterval)
-      else if playPattern.test message
-        match = message.match playPattern
-        if (limit?)
-          robot.logger.debug "limit: #{limit}, host: #{match[2]}, #{match[1]}"
-          if match[2] == limit
-            buffer.push message
-        else
-          buffer.push message
-      else if message.match playRecapPattern
-        robot.logger.debug "recap mode activated"
-        failedMode = false
-        recapMode = true
-        base_report.attachments[0].fields = []
-        setTimeout(sendRecap, 10000)
-      else if (message.match noMoreHostLeftPattern)
-        failedMode = true
       aTaskResult = []
       aTaskResult.push message
 
@@ -115,17 +100,27 @@ module.exports = (robot) ->
         clearTimeout(handleTaskTimeout)
         handleTaskTimeout = null
       if message.match playPattern
-        onMatch message
-        aPlay = message.match[1]
-        aPlayHostNumber = 0
-      else if (message.match taskPattern)
-        onMatch message
-      else if (message.match handlerPattern)
-        onMatch message
-      else if (message.match playRecapPattern)
-        onMatch message
+        robot.logger.debug "play pattern detected #{message}"
+        match = message.match playPattern
+        if (limit?) && match[2] == limit
+          robot.logger.debug "limit: #{limit}, host: #{match[2]}, #{match[1]}"
+          buffer.push message
+      else if message.startsWith "TASK"
+        robot.logger.debug "task pattern detected #{message}"
+        onTaskMatch message
+      else if message.startsWith "RUNNING HANDLER"
+        robot.logger.debug "handler pattern detected #{message}"
+        onTaskMatch message
       else if (message.match noMoreHostLeftPattern)
-        onMatch message
+        onTaskMatch message
+        failedMode = true
+      else if (message.match playRecapPattern)
+        onTaskMatch message
+        robot.logger.debug "recap mode activated"
+        failedMode = false
+        recapMode = true
+        base_report.attachments[0].fields = []
+        setTimeout(sendRecap, 10000)
       else
         if (message.startsWith 'ok') or (message.startsWith 'skipping')
           if (process.env.HUBOT_ANSIBLE_VERBOSE?)
