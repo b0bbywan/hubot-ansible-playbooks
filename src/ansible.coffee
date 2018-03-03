@@ -10,11 +10,30 @@
 # Author:
 #   Mathieu Réquillart
 
-Ansible = require('node-ansible')
+Ansible = require 'node-ansible'
 settings = require process.env.HUBOT_ANSIBLE_SETTINGS
 
 String::startsWith ?= (s) -> @slice(0, s.length) == s
 
+buffer = []
+aTaskResult = []
+
+handleBufferTimeOut = null
+bufferInterval = 1000
+
+handleTaskTimeout= null
+bufferTaskInterval = 5000
+
+recapMode = false
+failedMode = false
+
+taskPattern = //
+playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/
+playRecapPattern = /PLAY RECAP \*+/
+handlerPattern = /RUNNING HANDLER \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/_]+ ?)*))?\] \*+/
+noMoreHostLeftPattern = /NO MORE HOSTS LEFT \*+/
+deprecationWarningPattern = /\[DEPRECATION WARNING\]/
+emptyStringPattern = /^\s*$/
 
 base_report = {
   "attachments": [
@@ -31,44 +50,13 @@ base_report = {
   "as_user": true,
 }
 
+
 module.exports = (robot) ->
   robot.respond /update (\w+((-|_)\w+)*)( limit (\w*))?( only (\w*(,\w*)*))?( skip (\w*(,\w*)*))?( with (\w*:.*(,\w*:.*)*))?/i, (msg) ->
-    target = msg.match[1]
-    if !settings.hasOwnProperty(target)
-      msg.send "Unknown environment"
-      return
-    if msg.message.user.id not in settings['admin_users'] and msg.message.user.id not in settings[target]['authorized_users']
-      msg.send "Sorry bro', you're not allowed to do this"
-      return
-    invfile = "inventory/" + settings[target]['inventory']
-    playbook = settings[target]['playbook']
-    cwd = settings['path']
 
-    robot.emit "ansible_update", {
-      msg: msg
-    }
-
-    buffer = []
-    handleBufferTimeOut = null
-    bufferInterval = 1000
-    handleTaskTimeout= null
-    bufferTaskInterval = 5000
-    recapMode = false
-    failedMode = false
-
-    taskPattern = /TASK \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/~\._]+ ?)*))?\] \*+/i
-    playPattern = /PLAY (\[([a-zA-Z0-9-_\.]+)\])? \*+/i
-    playRecapPattern = /PLAY RECAP \*+/i
-    handlerPattern = /RUNNING HANDLER \[([a-zA-Z0-9-_]+)( : (([a-zA-Z0-9-/_]+ ?)*))?\] \*+/i
-    noMoreHostLeftPattern = /NO MORE HOSTS LEFT \*+/i
-    deprecationWarningPattern = /\[DEPRECATION WARNING\]/i
-
-    aPlay = ""
-    aPlayHostNumber = 0
-    aTask = ""
-    aTaskResult = []
-    taskIsSetup = false
-
+    sendRecap = ->
+      msg.send base_report
+      recapMode = false
 
     emptyBuffer = ->
       if buffer.length > 0
@@ -92,11 +80,6 @@ module.exports = (robot) ->
       handleTaskTimeout = null
       if handleBufferTimeOut == null
         handleBufferTimeOut = setTimeout(emptyBuffer, bufferInterval)
-
-    sendRecap = ->
-      robot.logger.debug "sending #{base_report}"
-      msg.send(base_report)
-      recapMode = false
 
     onMatch = (message) ->
       if aTaskResult.length > 1
@@ -154,7 +137,6 @@ module.exports = (robot) ->
         else if failedMode
           buffer.push message
         else if recapMode
-          robot.logger.debug "recapMode : #{message}"
           splittedMessage = message.split(':')
           if splittedMessage.length > 1
             host = splittedMessage[0].trim()
@@ -165,6 +147,22 @@ module.exports = (robot) ->
         else
           robot.logger.warning "warn: #{message} did not match"
           buffer.push message
+
+
+    target = msg.match[1]
+    if !settings.hasOwnProperty(target)
+      msg.send "Unknown environment"
+      return
+    if msg.message.user.id not in settings['admin_users'] and msg.message.user.id not in settings[target]['authorized_users']
+      msg.send "Sorry bro', you're not allowed to do this"
+      return
+    invfile = "inventory/" + settings[target]['inventory']
+    playbook = settings[target]['playbook']
+    cwd = settings['path']
+
+    robot.emit "ansible_update", {
+      msg: msg
+    }
 
     if msg.match[4]
       limit = msg.match[5].trim()
